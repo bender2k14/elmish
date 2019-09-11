@@ -117,6 +117,18 @@ module Program =
         { program
             with syncDispatch = syncDispatch }
 
+    let withMailboxProcessor (program: Program<'arg, 'model, 'msg, 'view>) =
+        program |> withSyncDispatch
+            (fun dispatch ->
+                let inbox = MailboxProcessor.Start(fun mb ->
+                    let rec loop() = async {
+                      let! msg = mb.Receive()
+                      dispatch msg
+                      return! loop()  
+                    }
+                    loop ())
+                inbox.Post)
+
     /// For library authors only: map the program type
     let map mapInit mapUpdate mapView mapSetState mapSubscribe
             (program: Program<'arg, 'model, 'msg, 'view>) =
